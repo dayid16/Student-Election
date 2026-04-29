@@ -54,22 +54,26 @@ class Logic(Window):
         if not username.strip().isalpha():
             self.login_error.setText(f"Please enter a valid\nusername (Letters only)")
         else:
-            with open("usernames.csv", "r") as csvfile:
-                reader = csv.DictReader(csvfile)
-                for row in reader:
-                    if row["username"].strip() == username.strip():
-                        if row["voted"].strip() == "True":
-                            self.login_error.setText(f"You have already voted!")
-                        else:
-                            self.current_user = username
-                            self.switch_screen(self._build_vote_ui)
-                        break
-                else:
-                    with open("usernames.csv", "a") as csvfile:
-                        writer = csv.writer(csvfile)
-                        writer.writerow([username, "False"])
-                    self.current_user = username
-                    self.switch_screen(self._build_vote_ui)
+            try:
+                with open("usernames.csv", "r") as csvfile:
+                    reader = csv.DictReader(csvfile)
+                    for row in reader:
+                        if row["username"].strip() == username.strip():
+                            if row["voted"].strip() == "True":
+                                self.login_error.setText(f"You have already voted!")
+                            else:
+                                self.current_user = username
+                                self.switch_screen(self._build_vote_ui)
+                            break
+                    else:
+                        with open("usernames.csv", "a") as csvfile:
+                            writer = csv.writer(csvfile)
+                            writer.writerow([username, "False"])
+                        self.current_user = username
+                        self.switch_screen(self._build_vote_ui)
+            except FileNotFoundError:
+                self.login_error.setText(f"usernames.csv not found")
+                return
 
     def handle_vote(self) -> None:
         '''
@@ -97,30 +101,46 @@ class Logic(Window):
             return
 
         rows = []
-        with open("votes.csv", "r") as csvfile:
-            reader = csv.DictReader(csvfile)
-            for row in reader:
-                if row["candidate"] == selected:
-                    row["votes"] = int(row["votes"]) + 1
-                rows.append(row)
+        try:
+            with open("votes.csv", "r") as csvfile:
+                reader = csv.DictReader(csvfile)
+                for row in reader:
+                    if row["candidate"] == selected:
+                        row["votes"] = int(row["votes"]) + 1
+                    rows.append(row)
+        except FileNotFoundError:
+            self.vote_error.setText(f"votes.csv not found")
+            return
 
-        with open("votes.csv", "w") as csvfile:
-            writer = csv.DictWriter(csvfile, fieldnames=["candidate", "votes"])
-            writer.writeheader()
-            writer.writerows(rows)
+        try:
+            with open("votes.csv", "w") as csvfile:
+                writer = csv.DictWriter(csvfile, fieldnames=["candidate", "votes"])
+                writer.writeheader()
+                writer.writerows(rows)
+        except FileNotFoundError:
+            self.vote_error.setText(f"votes.csv not found")
+            return
 
         rows = []
-        with open("usernames.csv", "r") as csvfile:
-            reader = csv.DictReader(csvfile)
-            for row in reader:
-                if row["username"] == self.current_user:
-                    row["voted"] = "True"
-                rows.append(row)
+        try:
+            with open("usernames.csv", "r") as csvfile:
+                reader = csv.DictReader(csvfile)
+                for row in reader:
+                    if row["username"] == self.current_user:
+                        row["voted"] = "True"
+                    rows.append(row)
+        except FileNotFoundError:
+            self.vote_error.setText(f"usernames.csv not found")
+            return
 
-        with open("usernames.csv", "w") as csvfile:
-            writer = csv.DictWriter(csvfile, fieldnames=["username", "voted"])
-            writer.writeheader()
-            writer.writerows(rows)
+        try:
+            with open("usernames.csv", "w") as csvfile:
+                writer = csv.DictWriter(csvfile, fieldnames=["username", "voted"])
+                writer.writeheader()
+                writer.writerows(rows)
+        except FileNotFoundError:
+            self.vote_error.setText(f"usernames.csv not found")
+            return
 
         self.switch_screen(self._build_results_ui)
 
@@ -135,9 +155,13 @@ class Logic(Window):
         Handles the logic of the results screen.
         This function reads the votes.csv file and update the progress bar and votes count with the correct votes.
         '''
-        with open("votes.csv", "r") as csvfile:
-            reader = csv.DictReader(csvfile)
-            rows = list(reader)
+        try:
+            with open("votes.csv", "r") as csvfile:
+                reader = csv.DictReader(csvfile)
+                rows = list(reader)
+        except FileNotFoundError:
+            return
+
 
         total_votes = sum(int(row["votes"]) for row in rows)
         if total_votes == 0:
